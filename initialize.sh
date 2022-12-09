@@ -1,11 +1,30 @@
 #!/usr/bin/env bash
-yum install squid -y
-sed -i 's/http_access deny all/http_access allow all/' /etc/squid/squid.conf
-cat << EOS >> /etc/squid/squid.conf
-visible_hostname none
-forwarded_for off
-request_header_access X-FORWARDED-FOR deny all
-request_header_access VIA deny all
-request_header_access CACHE-CONTROL deny all
-EOS
-systemctl enable --now squid
+
+set -ue -o pipefail
+
+USER="ubuntu"
+USER_HOME="/home/${USER}"
+
+sudo -u ${USER} mkdir -p ${USER_HOME}/.local/bin
+export PATH="${USER_HOME}/.local/bin:${PATH}"
+
+apt update && apt upgrade -y
+apt install -y \
+    git \
+    curl \
+    wget \
+    zip \
+    unzip \
+    emacs-nox \
+    less \
+    software-properties-common \
+    python3-testresources # for launchpadlib; see https://www.discoverbits.in/864/error-launchpadlib-requires-testresources-which-installed
+
+PYTHON_VERSION="3.10"
+PYTHON="python${PYTHON_VERSION}"
+PIP="pip${PYTHON_VERSION}"
+add-apt-repository -y ppa:deadsnakes/ppa
+apt install -y ${PYTHON} ${PYTHON}-dev ${PYTHON}-venv
+sudo -u ${USER} ${PYTHON} -m ensurepip --upgrade
+sudo -u ${USER} ${USER_HOME}/.local/bin/${PIP} install pipenv poethepoet
+curl -sSL https://install.python-poetry.org | sudo -u ${USER} ${PYTHON} -

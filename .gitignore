@@ -2,7 +2,7 @@
 *.tfvars
 *.tfstate
 *.tfstate.backup
-squid_key
-squid_key.pub
+computing_key
+computing_key.pub
 !/.gitignore
 !/.vscode
