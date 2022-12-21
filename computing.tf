@@ -50,7 +50,7 @@ variable "remote_key_local_path" {
   default = null
 }
 
-variable "instance" {
+variable "instance_type" {
   type    = string
   default = "c6i.large"
 }
@@ -152,7 +152,7 @@ resource "aws_key_pair" "computing_key" {
 
 resource "aws_instance" "computing_server" {
   ami                    = data.aws_ssm_parameter.ubuntu_focal.value
-  instance_type          = "t2.micro"
+  instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.allow_computing_port.id]
   subnet_id              = aws_subnet.public_subnet.id
   key_name               = aws_key_pair.computing_key.id
