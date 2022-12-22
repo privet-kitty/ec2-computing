@@ -40,6 +40,7 @@ variable "allowed_cidr" {
 locals {
   current_ip         = chomp(data.http.ifconfig.response_body)
   allowed_cidr_guard = var.allowed_cidr == null ? "${local.current_ip}/32" : var.allowed_cidr
+  user               = "ubuntu"
 }
 
 variable "remote_key_local_path" {
@@ -160,11 +161,11 @@ resource "aws_instance" "computing_server" {
 
   provisioner "file" {
     content     = var.remote_key_local_path == null ? tls_private_key.remote_generated_key.private_key_openssh : file(var.remote_key_local_path.private)
-    destination = "/home/ubuntu/.ssh/id_rsa"
+    destination = "/home/${local.user}/.ssh/id_rsa"
 
     connection {
       type        = "ssh"
-      user        = "ubuntu"
+      user        = local.user
       private_key = file("./computing_key")
       host        = self.public_dns
     }
@@ -172,11 +173,11 @@ resource "aws_instance" "computing_server" {
 
   provisioner "file" {
     content     = var.remote_key_local_path == null ? tls_private_key.remote_generated_key.public_key_openssh : file(var.remote_key_local_path.public)
-    destination = "/home/ubuntu/.ssh/id_rsa.pub"
+    destination = "/home/${local.user}/.ssh/id_rsa.pub"
 
     connection {
       type        = "ssh"
-      user        = "ubuntu"
+      user        = local.user
       private_key = file("./computing_key")
       host        = self.public_dns
     }
@@ -198,4 +199,8 @@ output "public_dns" {
 
 output "allowed_cidr_guard" {
   value = local.allowed_cidr_guard
+}
+
+output "ssh_destination" {
+  value = "${local.user}@${aws_instance.computing_server.public_ip}"
 }
