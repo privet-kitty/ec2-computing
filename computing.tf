@@ -1,5 +1,5 @@
 terraform {
-  required_version = "~> 1.3.5"
+  required_version = "~> 1.3"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -55,6 +55,7 @@ variable "instance_type" {
   type    = string
   default = "c6i.large"
 }
+
 
 resource "tls_private_key" "remote_generated_key" {
   algorithm = "RSA"
@@ -139,7 +140,7 @@ resource "aws_security_group" "allow_computing_port" {
 }
 
 data "aws_ssm_parameter" "ubuntu_focal" {
-  name = "/aws/service/canonical/ubuntu/server/20.04/stable/current/amd64/hvm/ebs-gp2/ami-id"
+  name = "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id"
 }
 
 resource "aws_key_pair" "computing_key" {

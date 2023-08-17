@@ -22,7 +22,7 @@ You can set terraform variables via e.g. `terraform.tfvars` or `-var` option (li
 - The public IP and DNS of the instance are displayed after deploy.
 - SSH login command will be like `ssh -i computing_key ubuntu@<public IP>`.
 - Logs on start-up are stored at `/var/log/cloud-init-output.log` in the instance.
-  - Please be aware that currently the completion of User data scripts isn't monitored by terraform. You can check this log file to see that.
+  - Please be aware that currently **the completion of User data scripts isn't monitored by terraform**. You can check this log file to see that.
 
 ### Destroy
 
