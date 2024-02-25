@@ -12,18 +12,15 @@ terraform {
   }
 }
 
-variable "aws_region" {
-  type    = string
-  default = "ap-northeast-1"
-}
-
-variable "project_code" {
-  type    = string
-  default = null
-}
-
 provider "aws" {
   region = var.aws_region
+
+  default_tags {
+    tags = {
+      Name        = "${var.unique_name}"
+      ProjectCode = var.project_code
+    }
+  }
 }
 
 data "http" "ifconfig" {
@@ -31,30 +28,14 @@ data "http" "ifconfig" {
 }
 
 
-variable "allowed_cidr" {
-  type    = string
-  default = null
-}
-
-
 locals {
   current_ip         = chomp(data.http.ifconfig.response_body)
   allowed_cidr_guard = var.allowed_cidr == null ? "${local.current_ip}/32" : var.allowed_cidr
   user               = "ubuntu"
+  private_key_path   = "./computing_key"
+  public_key_path    = "./computing_key.pub"
 }
 
-variable "remote_key_local_path" {
-  type = object({
-    public  = string
-    private = string
-  })
-  default = null
-}
-
-variable "instance_type" {
-  type    = string
-  default = "c6i.large"
-}
 
 
 resource "tls_private_key" "remote_generated_key" {
@@ -67,11 +48,6 @@ resource "aws_vpc" "computing_vpc" {
   enable_dns_hostnames             = "true"
   instance_tenancy                 = "default"
   assign_generated_ipv6_cidr_block = "false"
-
-  tags = {
-    Name        = "computing_vpc"
-    ProjectCode = var.project_code
-  }
 }
 
 resource "aws_subnet" "public_subnet" {
@@ -80,11 +56,6 @@ resource "aws_subnet" "public_subnet" {
   assign_ipv6_address_on_creation = "false"
   map_public_ip_on_launch         = "true"
   # availability_zone can't be fixed because the region isn't fixed either.
-
-  tags = {
-    Name        = "computing_vpc_public_subnet"
-    ProjectCode = var.project_code
-  }
 }
 
 resource "aws_route_table" "public_rt" {
@@ -92,10 +63,6 @@ resource "aws_route_table" "public_rt" {
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.computing_igw.id
-  }
-  tags = {
-    Name        = "computing_vpc_public_rt"
-    ProjectCode = var.project_code
   }
 }
 
@@ -111,14 +78,9 @@ resource "aws_route_table_association" "public_rt_public_subnet" {
 
 resource "aws_internet_gateway" "computing_igw" {
   vpc_id = aws_vpc.computing_vpc.id
-  tags = {
-    Name        = "computing_vpc_igw"
-    ProjectCode = var.project_code
-  }
 }
 
 resource "aws_security_group" "allow_computing_port" {
-  name        = "allow_computing_port"
   description = "Allow traffic for computing environment"
   vpc_id      = aws_vpc.computing_vpc.id
   ingress { # SSH
@@ -133,10 +95,6 @@ resource "aws_security_group" "allow_computing_port" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = {
-    Name        = "computing_vpc_allow_computing_port"
-    ProjectCode = var.project_code
-  }
 }
 
 data "aws_ssm_parameter" "ubuntu_focal" {
@@ -144,12 +102,8 @@ data "aws_ssm_parameter" "ubuntu_focal" {
 }
 
 resource "aws_key_pair" "computing_key" {
-  key_name   = "computing_key"
-  public_key = file("./computing_key.pub")
-  tags = {
-    Name        = "computing_vpc_key"
-    ProjectCode = var.project_code
-  }
+  key_name   = var.unique_name
+  public_key = file(local.public_key_path)
 }
 
 resource "aws_instance" "computing_server" {
@@ -161,32 +115,27 @@ resource "aws_instance" "computing_server" {
   user_data              = file("initialize.sh")
 
   provisioner "file" {
-    content     = var.remote_key_local_path == null ? tls_private_key.remote_generated_key.private_key_openssh : file(var.remote_key_local_path.private)
+    content     = var.remote_key_path == null ? tls_private_key.remote_generated_key.private_key_openssh : file(var.remote_key_path.private)
     destination = "/home/${local.user}/.ssh/id_rsa"
 
     connection {
       type        = "ssh"
       user        = local.user
-      private_key = file("./computing_key")
+      private_key = file(local.private_key_path)
       host        = self.public_dns
     }
   }
 
   provisioner "file" {
-    content     = var.remote_key_local_path == null ? tls_private_key.remote_generated_key.public_key_openssh : file(var.remote_key_local_path.public)
+    content     = var.remote_key_path == null ? tls_private_key.remote_generated_key.public_key_openssh : file(var.remote_key_path.public)
     destination = "/home/${local.user}/.ssh/id_rsa.pub"
 
     connection {
       type        = "ssh"
       user        = local.user
-      private_key = file("./computing_key")
+      private_key = file(local.private_key_path)
       host        = self.public_dns
     }
-  }
-
-  tags = {
-    Name        = "computing_server"
-    ProjectCode = var.project_code
   }
 }
 
