@@ -19,13 +19,6 @@ variable "allowed_cidr" {
   default = null
 }
 
-variable "remote_key_path" {
-  type = object({
-    public  = string
-    private = string
-  })
-  default = null
-}
 
 variable "instance_type" {
   type    = string
